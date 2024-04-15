@@ -1,0 +1,18 @@
+apiVersion: tanuu.dev/v1alpha1
+kind: NodeGroupClaim
+metadata:
+  name: demo
+spec:
+  compositionSelector:
+    matchLabels:
+      provider: google
+      cluster: gke
+  id: demo
+  parameters:
+    replicaCount: 3
+    image: projects/gcp-project/global/images/imagename
+    size: 20
+    imageType: projects/gcp-project/zones/same-as-below/diskTypes/pd-balanced
+    machineType: e2-medium
+    serviceAccountEmail: gcp-service-account
+    zone: europe-north1-a

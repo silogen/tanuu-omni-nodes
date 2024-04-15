@@ -1,0 +1,24 @@
+apiVersion: meta.pkg.crossplane.io/v1
+kind: Configuration
+metadata:
+  name: tanuu-omni-nodes
+  annotations:
+    meta.crossplane.io/maintainer: Andy Allred
+    meta.crossplane.io/source: github.com/tanuudev/tanuu-omni-nodes
+    meta.crossplane.io/license: MIT
+    meta.crossplane.io/description: A Configuration package that defines a NodeGroup and NodeGroupClaim types that can be used to create and provision fully operational Kubernetes nodes in Google Cloud Platform.
+    meta.crossplane.io/readme: A Configuration package that defines a NodeGroup and NodeGroupClaim types that can be used to create and provision fully operational Kubernetes nodes in Google Cloud Platform.
+spec:
+  crossplane:
+    version: ">=v1.14.0"
+  dependsOn:
+  - provider: xpkg.upbound.io/upbound/provider-gcp-compute
+    version: ">=v0.41.2"
+  - provider:  xpkg.upbound.io/crossplane-contrib/provider-kubernetes
+    version: ">=v0.10.0"
+  - function: xpkg.upbound.io/crossplane-contrib/function-patch-and-transform
+    version: ">=v0.1.4"
+  - function: xpkg.upbound.io/crossplane-contrib/function-go-templating
+    version: ">=v0.4.1"
+  - function: xpkg.upbound.io/crossplane-contrib/function-auto-ready
+    version: ">=v0.2.1"

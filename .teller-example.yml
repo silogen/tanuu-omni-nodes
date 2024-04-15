@@ -1,0 +1,11 @@
+
+project: platform
+
+providers:
+  # GOOGLE_APPLICATION_CREDENTIALS=foobar.json
+  # https://cloud.google.com/secret-manager/docs/reference/libraries#setting_up_authentication
+  google_secretmanager:
+    env:
+      creds:
+        # need to supply the relevant version (versions/1)
+        path: projects/url-found-from-gcp/versions/2

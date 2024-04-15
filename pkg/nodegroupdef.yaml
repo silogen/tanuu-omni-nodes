@@ -1,0 +1,60 @@
+apiVersion: apiextensions.crossplane.io/v1
+kind: CompositeResourceDefinition
+metadata:
+  name: nodegroups.tanuu.dev
+spec:
+  group: tanuu.dev
+  names:
+    kind: NodeGroup
+    plural: nodegroups
+  claimNames:
+    kind: NodeGroupClaim
+    plural: nodegroupclaims
+  versions:
+  - name: v1alpha1
+    served: true
+    referenceable: true
+    schema:
+      openAPIV3Schema:
+        type: object
+        properties:
+          spec:
+            type: object
+            properties:
+              id:
+                type: string
+                description: Name of the nodegroup
+              parameters:
+                type: object
+                properties:
+                  replicaCount:
+                    type: integer
+                    description: Number of replicas to create.
+                  image:
+                    type: string
+                    description: Name of the image to boot from
+                  size:
+                    type: integer
+                    description: Name of the initial disk
+                  imageType:
+                    type: string
+                    description: Name of the type of image
+                  machineType:
+                    type: string
+                    description: Name of the machineType
+                  serviceAccountEmail:
+                    type: string
+                    description: Name of the serviceAccountEmail
+                  zone:
+                    type: string
+                    description: Name of the zone
+                required:
+                  - replicaCount
+                  - image
+                  - size
+                  - imageType
+                  - machineType
+                  - serviceAccountEmail
+                  - zone
+            required:
+              - parameters

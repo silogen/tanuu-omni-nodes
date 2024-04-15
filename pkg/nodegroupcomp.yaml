@@ -1,0 +1,81 @@
+apiVersion: apiextensions.crossplane.io/v1
+kind: Composition
+metadata:
+  name: tanuunodegropup
+  labels:
+    provider: google
+    cluster: gke
+spec:
+  compositeTypeRef:
+    apiVersion: tanuu.dev/v1alpha1
+    kind: NodeGroup
+  mode: Pipeline
+  pipeline:
+  # - functionRef:
+  #     name: function-patch-and-transform
+  #   step: patch-and-transform
+  #   input:
+  #     apiVersion: pt.fn.crossplane.io/v1beta1
+  #     kind: Resources
+  #     resources:
+  #     - name: dummy-pod
+  #       base:
+  #         apiVersion: kubernetes.crossplane.io/v1alpha1
+  #         kind: Object
+  #         metadata:
+  #           name: dummy-pod
+  #         spec:
+  #           forProvider:
+  #             manifest:
+  #               apiVersion: v1
+  #               kind: Namespace
+  #               metadata:
+  #                 name: dummy
+  - functionRef:
+      name: function-go-templating
+    step: schema
+    input:
+      apiVersion: gotemplating.fn.crossplane.io/v1beta1
+      kind: GoTemplate
+      source: Inline
+      inline:
+        template: |
+          {{- range (untilStep 0 (int $.observed.composite.resource.spec.parameters.replicaCount ) 1) }}          
+          ---
+          apiVersion: compute.gcp.upbound.io/v1beta1
+          kind: Instance
+          metadata:
+            generateName: {{ $.observed.composite.resource.spec.id }}-
+            annotations:
+              meta.upbound.io/instance-id: compute/v1beta1/{{ $.observed.composite.resource.spec.id }}
+              gotemplating.fn.crossplane.io/composition-resource-name: {{ $.observed.composite.resource.spec.id }}-{{ . }}
+            labels:
+              testing.upbound.io/instance-name: {{ $.observed.composite.resource.spec.id }}
+          spec:
+            forProvider:
+              bootDisk:
+                - deviceName: talos-instances
+                  initializeParams:
+                    - image: {{ $.observed.composite.resource.spec.parameters.image }}
+                      size: {{ $.observed.composite.resource.spec.parameters.size }}
+                      type: {{ $.observed.composite.resource.spec.parameters.imageType }}
+              machineType: {{ $.observed.composite.resource.spec.parameters.machineType }}
+              networkInterface:
+                - accessConfig:
+                    - networkTier: PREMIUM
+                  network: default
+                  stackType: IPV4_ONLY
+              serviceAccount: 
+                - email: {{ $.observed.composite.resource.spec.parameters.serviceAccountEmail }}
+                  scopes:
+                    - https://www.googleapis.com/auth/devstorage.read_only
+                    - https://www.googleapis.com/auth/logging.write
+                    - https://www.googleapis.com/auth/monitoring.write
+                    - https://www.googleapis.com/auth/servicecontrol
+                    - https://www.googleapis.com/auth/service.management.readonly
+                    - https://www.googleapis.com/auth/trace.append
+              zone: {{ $.observed.composite.resource.spec.parameters.zone }}
+          {{- end -}}
+  - functionRef:
+      name: function-auto-ready
+    step: automatically-detect-ready-composed-resources

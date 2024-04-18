@@ -1,7 +1,7 @@
 apiVersion: apiextensions.crossplane.io/v1
 kind: Composition
 metadata:
-  name: tanuunodegropup
+  name: tanuunodegroup
   labels:
     provider: google
     cluster: gke
@@ -40,7 +40,7 @@ spec:
       source: Inline
       inline:
         template: |
-          {{- range (untilStep 0 (int $.observed.composite.resource.spec.parameters.replicaCount ) 1) }}          
+          {{- range (untilStep 0 (int $.observed.composite.resource.spec.parameters.replicas ) 1) }}          
           ---
           apiVersion: compute.gcp.upbound.io/v1beta1
           kind: Instance
@@ -65,6 +65,8 @@ spec:
                     - networkTier: PREMIUM
                   network: default
                   stackType: IPV4_ONLY
+              scheduling:
+                - onHostMaintenance: TERMINATE
               serviceAccount: 
                 - email: {{ $.observed.composite.resource.spec.parameters.serviceAccountEmail }}
                   scopes:

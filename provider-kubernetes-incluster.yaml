@@ -55,10 +55,18 @@ metadata:
 spec:
   package: xpkg.upbound.io/crossplane-contrib/function-patch-and-transform:v0.4.0
 ---
+---
+apiVersion: pkg.crossplane.io/v1
+kind: Provider
+metadata:
+  name: provider-gcp-compute
+spec:
+  package: xpkg.upbound.io/upbound/provider-gcp-compute:v0.41.2
+---
 apiVersion: pkg.crossplane.io/v1
 kind: Configuration
 metadata:
   name: tanuu-omni-nodes
 spec:
-  package: xpkg.upbound.io/tanuudev/tanuu-omni-nodes:v0.0.1
+  package: xpkg.upbound.io/tanuudev/tanuu-omni-nodes:v0.0.2
   revisionHistoryLimit: 10

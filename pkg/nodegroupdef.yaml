@@ -27,7 +27,7 @@ spec:
               parameters:
                 type: object
                 properties:
-                  replicaCount:
+                  replicas:
                     type: integer
                     description: Number of replicas to create.
                   image:
@@ -49,7 +49,7 @@ spec:
                     type: string
                     description: Name of the zone
                 required:
-                  - replicaCount
+                  - replicas
                   - image
                   - size
                   - imageType
@@ -58,3 +58,12 @@ spec:
                   - zone
             required:
               - parameters
+    subresources:
+      status: {}
+      scale:
+        # specReplicasPath defines the JSONPath inside of a custom resource that corresponds to Scale.Spec.Replicas.
+        specReplicasPath: .spec.parameters.replicas
+        # statusReplicasPath defines the JSONPath inside of a custom resource that corresponds to Scale.Status.Replicas.
+        statusReplicasPath: .status.parameters.replicas
+        # labelSelectorPath defines the JSONPath inside of a custom resource that corresponds to Scale.Status.Selector.
+        # labelSelectorPath: .status.labelSelector

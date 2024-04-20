@@ -67,5 +67,5 @@ kind: Configuration
 metadata:
   name: tanuu-omni-nodes
 spec:
-  package: xpkg.upbound.io/tanuudev/tanuu-omni-nodes:v0.0.2
+  package: xpkg.upbound.io/tanuudev/tanuu-omni-nodes:v0.0.3
   revisionHistoryLimit: 10

@@ -65,8 +65,10 @@ spec:
                     - networkTier: PREMIUM
                   network: default
                   stackType: IPV4_ONLY
+              {{ if (contains "g2" $.observed.composite.resource.spec.parameters.machineType) }}
               scheduling:
                 - onHostMaintenance: TERMINATE
+                {{ end }}
               serviceAccount: 
                 - email: {{ $.observed.composite.resource.spec.parameters.serviceAccountEmail }}
                   scopes:

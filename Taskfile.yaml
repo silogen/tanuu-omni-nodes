@@ -18,3 +18,7 @@ tasks:
       - sleep 20
       - kubectl apply --filename provider-configs.yaml
 
+  omni:
+    desc: Create or Delete an omni cluster
+    cmds:
+      -  chmod +x create.sh && export LOG_LEVEL=Debug && ./create.sh

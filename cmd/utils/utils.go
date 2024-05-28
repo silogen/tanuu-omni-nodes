@@ -173,7 +173,7 @@ func WaitForCluster(environment Environment) {
 
 		for _, line := range lines {
 			log.Debug("Cluster Status: ", line)
-			if strings.Contains(line, "Cluster") && strings.Contains(line, "RUNNING") && strings.Contains(line, "Ready") {
+			if strings.Contains(line, "Cluster") && strings.Contains(line, "RUNNING") && !strings.Contains(line, "Not") {
 				// This line starts with "Cluster" and contains both "RUNNING" and "Ready"
 				return
 			}

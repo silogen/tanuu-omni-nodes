@@ -8,4 +8,23 @@ providers:
     env:
       creds:
         # need to supply the relevant version (versions/1)
-        path: projects/url-found-from-gcp/versions/2
+        path: projects/<gcp project ID here>/secrets/crossplane-auth/versions/2
+      OMNI_SERVICE_ACCOUNT_KEY:
+        # need to supply the relevant version (versions/1)
+        path: projects/<gcp project ID here>/secrets/omniserviceaccountkey/versions/1
+      OMNI_ENDPOINT:
+        # need to supply the relevant version (versions/1)
+        path: projects/<gcp project ID here>/secrets/omniendpoint/versions/1
+
+      TAILSCALE_CLIENT_ID:
+        # need to supply the relevant version (versions/1)
+        path: projects/<gcp project ID here>/secrets/tailscale-client-id/versions/1
+
+      TAILSCALE_CLIENT_SECRET:
+        # need to supply the relevant version (versions/1)
+        path: projects/<gcp project ID here>/secrets/tailscale-client-secret/versions/1
+
+      GITHUB_TOKEN:
+        # need to supply the relevant version (versions/1)
+        path: projects/<gcp project ID here>/secrets/omni-automation-cluster-init/versions/1
+        

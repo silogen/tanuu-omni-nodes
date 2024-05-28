@@ -5,6 +5,8 @@ Create node croups with Crossplane for Omni
 Ensure devbox is installed!
 Ensure there is an appropriate secret in GCP secrets manager (or depending on your teller config)
 
+Kubeconfig file named kubeconfig for a cluster where the crossplane config and claims have been installed. 
+
 ## Use
 Update the cmd/create/templates example files, and rename them to <name>.tmpl
 ```bash

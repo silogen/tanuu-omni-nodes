@@ -2,9 +2,9 @@ package utils
 
 import (
 	"bytes"
+	"context"
 	"crypto/rand"
 	"encoding/hex"
-	"fmt"
 	"io"
 	"net/http"
 	"os"
@@ -117,69 +117,102 @@ func Setup() {
 }
 
 func downloadFile(filepath string, url string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
 
-	// Get the data
-	resp, err := http.Get(url)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
+		log.Error("Error creating new request: ", err)
+		return err
+	}
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		log.Error("Error executing GET request: ", err)
 		return err
 	}
 	defer resp.Body.Close()
 
-	// Create the file
 	out, err := os.Create(filepath)
 	if err != nil {
+		log.Error("Error creating file: ", err)
 		return err
 	}
 	defer out.Close()
 
-	// Write the body to file
 	_, err = io.Copy(out, resp.Body)
+	if err != nil {
+		log.Error("Error writing to file: ", err)
+	}
+
 	return err
 }
 
 // WaitForReady waits for the managed nodes to be ready
 func WaitForReady() {
 	log.Debug("Waiting for the managed nodes to be ready")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
+
 	for {
-		cmd := exec.Command("kubectl", "get", "managed", "-o", "jsonpath={.items[*].status.conditions[?(@.type==\"Ready\")].status}")
-		cmd.Env = append(os.Environ(), "KUBECONFIG=kubeconfig")
-		output, err := cmd.Output()
-		if err != nil {
-			fmt.Println("Error executing kubectl command:", err)
+		select {
+		case <-ctx.Done():
+			log.Error("Timeout waiting for the managed nodes to be ready")
 			return
-		}
+		default:
+			cmd := exec.Command("kubectl", "get", "managed", "-o", "jsonpath='{$.items[*].status.conditions[?(@.type==\"Ready\")].status}'")
+			output, err := cmd.Output()
+			log.Debug(cmd.String())
+			log.Debug("Output: ", string(output))
+			if err != nil {
+				log.Error("Error executing kubectl command: ", err)
+				time.Sleep(5 * time.Second)
+				continue
+			}
 
-		if !strings.Contains(string(output), "False") {
-			break
+			if !strings.Contains(string(output), "False") {
+				return
+			}
+			log.Debug("Nodes not ready")
+			time.Sleep(5 * time.Second)
 		}
-
-		time.Sleep(5 * time.Second)
 	}
 }
 
 // WaitForCluster waits for the managed cluster to be ready
 func WaitForCluster(environment Environment) {
 	log.Debug("Waiting for the managed cluster to be ready")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
+
 	for {
-		cmd := exec.Command("omnictl", "cluster", "status", environment.Name)
-		cmd.Env = append(os.Environ(), "OMNI_SERVICE_ACCOUNT_KEY="+OmniAuth)
-		cmd.Env = append(os.Environ(), "OMNI_ENDPOINT="+OmniURL)
-		output, err := cmd.Output()
-		if err != nil {
-			fmt.Println("Error executing command:", err)
+		select {
+		case <-ctx.Done():
+			log.Error("Timeout waiting for the managed cluster to be ready")
 			return
-		}
-		lines := strings.Split(string(output), "\n")
-
-		for _, line := range lines {
-			log.Debug("Cluster Status: ", line)
-			if strings.Contains(line, "Cluster") && strings.Contains(line, "RUNNING") && !strings.Contains(line, "Not") {
-				// This line starts with "Cluster" and contains both "RUNNING" and "Ready"
-				return
+		default:
+			cmd := exec.Command("omnictl", "cluster", "status", environment.Name)
+			log.Debug("Command: ", cmd)
+			output, err := cmd.Output()
+			if err != nil {
+				log.Error("Error executing command: ", err)
+				time.Sleep(5 * time.Second)
+				continue
 			}
-		}
+			lines := strings.Split(string(output), "\n")
 
-		time.Sleep(5 * time.Second)
+			for _, line := range lines {
+				log.Debug("Cluster Status: ", line)
+				if strings.Contains(line, "Cluster") && strings.Contains(line, "RUNNING") && !strings.Contains(line, "Not") {
+					// This line starts with "Cluster" and contains both "RUNNING" and "Ready"
+					return
+				}
+			}
+
+			time.Sleep(5 * time.Second)
+		}
 	}
 }
 
@@ -188,16 +221,20 @@ func FindReadyNodes(environment string) ([]Machine, error) {
 	var machines Machines
 	nodelist := &bytes.Buffer{}
 	cmd := exec.Command("omnictl", "get", "machines", "-o", "jsonpath='{.metadata.id}'")
-	cmd.Env = append(os.Environ(), "OMNI_SERVICE_ACCOUNT_KEY="+OmniAuth)
-	cmd.Env = append(os.Environ(), "OMNI_ENDPOINT="+OmniURL)
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
 	cmd.Stdout = nodelist
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
+
 	// Run the command
 	err := cmd.Run()
 	if err != nil {
-		log.Fatal(err)
+		log.Error("Error executing command: ", err)
+		return nil, err
 	}
+
 	log.Debug("Node list: ", nodelist.String())
 	nodestring := strings.Trim(nodelist.String(), "'\n")
 	nodeids := strings.Split(nodestring, "\n'\n'\n")
@@ -205,66 +242,84 @@ func FindReadyNodes(environment string) ([]Machine, error) {
 		// Trim leading and trailing newline and quote characters from each node ID
 		nodeid = strings.Trim(nodeid, "'\n")
 		log.Debug("Node ID: ", nodeid)
-		cmd := exec.Command("omnictl", "get", "machinestatus", nodeid, "-o", "json")
-		cmd.Env = append(os.Environ(), "OMNI_SERVICE_ACCOUNT_KEY="+OmniAuth)
-		cmd.Env = append(os.Environ(), "OMNI_ENDPOINT="+OmniURL)
+		cmd := exec.CommandContext(ctx, "omnictl", "get", "machinestatus", nodeid, "-o", "json")
 		var stderr bytes.Buffer
 		cmd.Stderr = &stderr
 		var stdout bytes.Buffer
 		cmd.Stdout = &stdout
+
 		// Run the command
 		err := cmd.Run()
 		if err != nil {
-			log.Error("error running command: ", err)
-			log.Fatal(err)
+			log.Error("Error running command: ", err)
+			return nil, err
 		}
+
 		node := Machine{}
 		err = json.Unmarshal(stdout.Bytes(), &node)
 		if err != nil {
-			log.Fatal(err)
+			log.Error("Error unmarshalling JSON: ", err)
+			return nil, err
 		}
+
 		// add nodes if the spec.platformmetadata.hostname contains the environment name
 		if strings.Contains(node.Spec.Platformmetadata.Hostname, environment) {
 			machines.Machines = append(machines.Machines, node)
 		}
 	}
+
 	log.Debug("Machines: ", machines.Machines)
 	return machines.Machines, nil
 }
 
 // ApplyCluster applies the cluster
 func ApplyCluster(environment Environment) {
-	cmd := exec.Command("omnictl", "cluster", "template", "sync", "-f", environment.Name+"-cluster.yaml")
-	cmd.Env = append(os.Environ(), "OMNI_SERVICE_ACCOUNT_KEY="+OmniAuth)
-	cmd.Env = append(os.Environ(), "OMNI_ENDPOINT="+OmniURL)
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute) // Set your desired timeout
+	defer cancel()
+
+	cmd := exec.CommandContext(ctx, "omnictl", "cluster", "template", "sync", "-f", environment.Name+"-cluster.yaml")
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
+	log.Println("Applying cluster: ", cmd)
 	err := cmd.Run()
+
+	if ctx.Err() == context.DeadlineExceeded {
+		log.Fatalf("Command timed out: %v", ctx.Err())
+		return
+	}
+
 	if err != nil {
-		log.Fatal("Error creating environment: ", err)
-		log.Fatal("Error creating environment: ", stderr.String())
+		log.Fatalf("Error creating environment: %v, stderr: %s", err, stderr.String())
 	}
 }
 
-// ListClusters applies the cluster
+// ListClusters lists the clusters
 func ListClusters() ([]string, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute) // Set your desired timeout
+	defer cancel()
+
 	clusters := &bytes.Buffer{}
 	clusterlist := []string{}
-	cmd := exec.Command("omnictl", "get", "clusters", "-o", "jsonpath='{.metadata.id}'")
-	cmd.Env = append(os.Environ(), "OMNI_SERVICE_ACCOUNT_KEY="+OmniAuth)
-	cmd.Env = append(os.Environ(), "OMNI_ENDPOINT="+OmniURL)
+	cmd := exec.CommandContext(ctx, "omnictl", "get", "clusters", "-o", "jsonpath='{.metadata.id}'")
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
 	cmd.Stdout = clusters
 	err := cmd.Run()
+
+	if ctx.Err() == context.DeadlineExceeded {
+		log.Fatalf("Command timed out: %v", ctx.Err())
+		return nil, ctx.Err()
+	}
+
+	if err != nil {
+		log.Fatalf("Error finding environment: %v, stderr: %s", err, stderr.String())
+		return nil, err
+	}
+
 	log.Debug("Cluster list: ", clusters.String())
 	clusterstring := strings.Trim(clusters.String(), "'\n")
 	clusterList := strings.Split(clusterstring, "\n'\n'\n")
 
-	if err != nil {
-		log.Fatal("Error finding environment: ", err)
-		log.Fatal("Error finding environment: ", stderr.String())
-	}
 	for _, clusterid := range clusterList {
 		// Trim leading and trailing newline and quote characters from each node ID
 		clusterid = strings.Trim(clusterid, "'\n")
@@ -274,64 +329,93 @@ func ListClusters() ([]string, error) {
 	return clusterlist, nil
 }
 
-// DeleteOmniCluster applies the cluster
+// DeleteOmniCluster deletes the cluster
 func DeleteOmniCluster(name string) {
-	cmd := exec.Command("omnictl", "cluster", "delete", name)
-	cmd.Env = append(os.Environ(), "OMNI_SERVICE_ACCOUNT_KEY="+OmniAuth)
-	cmd.Env = append(os.Environ(), "OMNI_ENDPOINT="+OmniURL)
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute) // Set your desired timeout
+	defer cancel()
+
+	cmd := exec.CommandContext(ctx, "omnictl", "cluster", "delete", name)
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
 	err := cmd.Run()
-	if err != nil {
-		log.Fatal("Error deleting environment: ", err)
-		log.Fatal("Error deleting environment: ", stderr.String())
+
+	if ctx.Err() == context.DeadlineExceeded {
+		log.Fatalf("Command timed out: %v", ctx.Err())
+		return
 	}
+
+	if err != nil {
+		log.Fatalf("Error deleting environment: %v, stderr: %s", err, stderr.String())
+		return
+	}
+
 	log.Debug("Cluster deleted: ", name)
 }
 
-// DeleteOmniMachine applies the cluster
+// DeleteOmniMachine deletes the machine
 func DeleteOmniMachine(name string) {
-	cmd := exec.Command("omnictl", "delete", "link", name)
-	cmd.Env = append(os.Environ(), "OMNI_SERVICE_ACCOUNT_KEY="+OmniAuth)
-	cmd.Env = append(os.Environ(), "OMNI_ENDPOINT="+OmniURL)
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute) // Set your desired timeout
+	defer cancel()
+
+	cmd := exec.CommandContext(ctx, "omnictl", "delete", "link", name)
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
 	err := cmd.Run()
-	if err != nil {
-		log.Fatal("Error deleting environment: ", err)
-		log.Fatal("Error deleting environment: ", stderr.String())
+
+	if ctx.Err() == context.DeadlineExceeded {
+		log.Fatalf("Command timed out: %v", ctx.Err())
+		return
 	}
+
+	if err != nil {
+		log.Fatalf("Error deleting machine: %v, stderr: %s", err, stderr.String())
+		return
+	}
+
 	log.Debug("Machine deleted: ", name)
 }
 
 // DeleteNodes Deletes for the managed nodes
 func DeleteNodes(name string) {
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute) // Set your desired timeout
+	defer cancel()
+
 	nodes := &bytes.Buffer{}
 	log.Debug("Deleting node claims")
 
-	cmd := exec.Command("kubectl", "get", "nodegroupclaims", "-o", "NAME", "--no-headers")
-	cmd.Env = append(os.Environ(), "KUBECONFIG=kubeconfig")
+	cmd := exec.CommandContext(ctx, "kubectl", "get", "nodegroupclaims", "-o", "NAME", "--no-headers")
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
 	cmd.Stdout = nodes
 	err := cmd.Run()
-	if err != nil {
-		log.Fatal("Error getting nodegroupclaims: ", err)
-		log.Fatal("Error getting nodegroupclaims: ", stderr.String())
+
+	if ctx.Err() == context.DeadlineExceeded {
+		log.Fatalf("Command timed out: %v", ctx.Err())
+		return
 	}
+
+	if err != nil {
+		log.Fatalf("Error getting nodegroupclaims: %v, stderr: %s", err, stderr.String())
+		return
+	}
+
 	for _, node := range strings.Split(nodes.String(), "\n") {
 		if strings.Contains(node, name) {
 			log.Debug("Deleting nodegroupclaim: ", node)
-			cmd := exec.Command("kubectl", "delete", node)
-			cmd.Env = append(os.Environ(), "KUBECONFIG=kubeconfig")
+			cmd := exec.CommandContext(ctx, "kubectl", "delete", node)
 			var stderr bytes.Buffer
 			cmd.Stderr = &stderr
 			err := cmd.Run()
+
+			if ctx.Err() == context.DeadlineExceeded {
+				log.Fatalf("Command timed out: %v", ctx.Err())
+				return
+			}
+
 			if err != nil {
-				log.Fatal("Error deleting nodegroupclaim: ", err)
-				log.Fatal("Error deleting nodegroupclaim: ", stderr.String())
+				log.Fatalf("Error deleting nodegroupclaim: %v, stderr: %s", err, stderr.String())
+				return
 			}
 		}
 	}
-
 }

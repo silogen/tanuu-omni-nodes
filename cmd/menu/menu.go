@@ -1,10 +1,12 @@
 package menu
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/charmbracelet/huh"
 	"github.com/charmbracelet/huh/spinner"
@@ -30,10 +32,6 @@ func Menu() {
 	accessible, _ := strconv.ParseBool(os.Getenv("ACCESSIBLE"))
 	action := ""
 	form := huh.NewForm(
-		// huh.NewGroup(huh.NewNote().
-		// 	Title("TanuuDev").
-		// 	Description("Welcome to TanuuDev.\n\nLets get started")),
-
 		huh.NewGroup(
 			huh.NewSelect[string]().
 				Options(huh.NewOptions("Create Environment", "Delete Environment")...).
@@ -56,7 +54,6 @@ func Menu() {
 					Title("Choose your environment name (will be appended with random characters)").
 					Description("environment should we create?.").
 					Placeholder("test"),
-				// TODO add some validation here
 			),
 		).WithAccessible(accessible)
 		err := form.Run()
@@ -72,7 +69,17 @@ func Menu() {
 		envname := environment.Name + "-" + suffix
 
 		createenv := func() {
-			create.Createenvironment(envname)
+			ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute) // Set your desired timeout
+			defer cancel()
+
+			err := create.Createenvironment(envname)
+			if err != nil {
+				if ctx.Err() == context.DeadlineExceeded {
+					log.Fatalf("Command timed out: %v", ctx.Err())
+				} else {
+					log.Fatalf("Error creating environment: %v", err)
+				}
+			}
 		}
 		//spinner while running func
 		log.Debug("Creating environment with name: ", envname)

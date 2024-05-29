@@ -1,20 +1,15 @@
 {
   "packages": [
     "go@1.22.1",
-    "azure-cli@2.56.0",
-    "d2@0.6.3",
     "go-task@3.35.1",
     "path:gcloud#google-cloud-sdk",
-    "kind@0.22.0",
     "gh@2.44.1",
     "kubectl@1.29.2",
     "bat@0.24.0",
     "yq-go@4.41.1",
     "kubernetes-helm@3.14.1",
-    "python@3.11",
     "teller@1.5.6",
-    "crossplane-cli@1.15.1",
-    "upbound@0.30.0"
+    "omnictl@0.32.2"
   ],
   "shell": {
     "init_hook": [

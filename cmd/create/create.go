@@ -2,6 +2,7 @@ package create
 
 import (
 	"bytes"
+	"context"
 	"embed"
 	"os"
 	"os/exec"
@@ -40,46 +41,59 @@ func Createenvironment(name string) error {
 	// Execute the template with the environment struct
 	claimfile, err := os.OpenFile(environment.Name+"-composition.yaml", os.O_TRUNC|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
-		log.Fatalln(err)
+		log.Fatalf("Error opening claimfile: %v", err)
+		return err
 	}
 	defer claimfile.Close()
 	clusterfile, err := os.OpenFile(environment.Name+"-cluster.yaml", os.O_TRUNC|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
-		log.Fatalln(err)
+		log.Fatalf("Error opening clusterfile: %v", err)
+		return err
 	}
 	defer clusterfile.Close()
 	kubeconfigfile, err := os.OpenFile(environment.Name+".kubeconfig", os.O_TRUNC|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
-		log.Fatalln(err)
+		log.Fatalf("Error opening kubeconfigfile: %v", err)
+		return err
 	}
 	defer kubeconfigfile.Close()
 	err = claimtemp.Execute(claimfile, environment)
 	if err != nil {
-		log.Fatal("Error executing template: ", err)
+		log.Fatalf("Error executing template: %v", err)
 		return err
 	}
 	// check that fine kubeconfig exists
 	if _, err := os.Stat("kubeconfig"); os.IsNotExist(err) {
-		log.Fatal("kubeconfig file does not exist")
+		log.Fatalf("kubeconfig file does not exist: %v", err)
+		return err
 	}
 	// commandstring := "KUBECONFIG=kubeconfig kubectl apply -f " + environment.Name + "-composition.yaml"
-	cmd := exec.Command("kubectl", "apply", "-f", environment.Name+"-composition.yaml")
-	cmd.Env = append(os.Environ(), "KUBECONFIG=kubeconfig")
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute) // Set your desired timeout
+	defer cancel()
+	cmd := exec.CommandContext(ctx, "kubectl", "apply", "-f", environment.Name+"-composition.yaml")
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
 	// cmd.Stdout = os.Stdout
 	err = cmd.Run()
+
+	if ctx.Err() == context.DeadlineExceeded {
+		log.Fatalf("Command timed out: %v", ctx.Err())
+		return ctx.Err()
+	}
+
 	if err != nil {
-		log.Fatal("Error creating environment: ", err)
-		log.Fatal("Error creating environment: ", stderr.String())
+		log.Fatalf("Error creating environment: %v, stderr: %s", err, stderr.String())
 		return err
 	}
 	utils.WaitForReady()
+	log.Debug("nodes are ready")
 	// get the omni node ID's
 	time.Sleep(30 * time.Second)
+	err = nil
 	nodes, err := utils.FindReadyNodes(environment.Name)
 	if err != nil {
-		log.Fatal("Error finding ready nodes: ", err)
+		log.Fatalf("Error finding ready nodes: %v", err)
+		return err
 	}
 	log.Debug("Nodes: ", nodes)
 	gpulist := []string{}
@@ -105,7 +119,7 @@ func Createenvironment(name string) error {
 	log.Debug("Gpus: ", environment.Gpus)
 	err = clustertemp.Execute(clusterfile, environment)
 	if err != nil {
-		log.Fatal("Error executing template: ", err)
+		log.Fatalf("Error executing template: %v", err)
 		return err
 	}
 	// apply the omni template
@@ -113,7 +127,7 @@ func Createenvironment(name string) error {
 	time.Sleep(30 * time.Second)
 	err = kubeconfigtemp.Execute(kubeconfigfile, environment)
 	if err != nil {
-		log.Fatal("Error executing template: ", err)
+		log.Fatalf("Error executing template: %v", err)
 		return err
 	}
 	utils.WaitForCluster(environment)

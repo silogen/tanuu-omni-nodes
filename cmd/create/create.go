@@ -58,6 +58,10 @@ func Createenvironment(name string) error {
 		log.Fatal("Error executing template: ", err)
 		return err
 	}
+	// check that fine kubeconfig exists
+	if _, err := os.Stat("kubeconfig"); os.IsNotExist(err) {
+		log.Fatal("kubeconfig file does not exist")
+	}
 	// commandstring := "KUBECONFIG=kubeconfig kubectl apply -f " + environment.Name + "-composition.yaml"
 	cmd := exec.Command("kubectl", "apply", "-f", environment.Name+"-composition.yaml")
 	cmd.Env = append(os.Environ(), "KUBECONFIG=kubeconfig")

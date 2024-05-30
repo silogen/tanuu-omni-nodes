@@ -28,6 +28,7 @@ func Menu() {
 	environment := environment{}
 
 	log.Info("starting up the menu...")
+	log.Debug("with debug enabled")
 	// Should we run in accessible mode?
 	accessible, _ := strconv.ParseBool(os.Getenv("ACCESSIBLE"))
 	action := ""
@@ -52,7 +53,7 @@ func Menu() {
 				huh.NewInput().
 					Value(&environment.Name).
 					Title("Choose your environment name (will be appended with random characters)").
-					Description("environment should we create?.").
+					Description("environment should we create?.\ntype EXIT to just exit.").
 					Placeholder("test"),
 			),
 		).WithAccessible(accessible)
@@ -61,7 +62,10 @@ func Menu() {
 		if err != nil {
 			log.Fatal("Uh oh:", err)
 		}
-
+		if environment.Name == "EXIT" {
+			log.Info("Exiting...")
+			os.Exit(0)
+		}
 		suffix, err := utils.GenerateRandomString(5)
 		if err != nil {
 			log.Error("Error generating random string: ", err)
@@ -71,7 +75,6 @@ func Menu() {
 		createenv := func() {
 			ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute) // Set your desired timeout
 			defer cancel()
-
 			err := create.Createenvironment(envname)
 			if err != nil {
 				if ctx.Err() == context.DeadlineExceeded {
@@ -109,6 +112,7 @@ func Menu() {
 		if err != nil {
 			log.Fatal("Error getting clusters: ", err)
 		}
+		clusters = append(clusters, "EXIT")
 		form := huh.NewForm(
 			huh.NewGroup(
 				huh.NewSelect[string]().
@@ -121,6 +125,10 @@ func Menu() {
 		err = form.Run()
 		if err != nil {
 			log.Fatal("Uh oh:", err)
+		}
+		if environment.Name == "EXIT" {
+			log.Info("Exiting...")
+			os.Exit(0)
 		}
 		log.Debug("Deleting environment with name: ", environment.Name)
 		utils.DeleteOmniCluster(environment.Name)

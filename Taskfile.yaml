@@ -6,7 +6,7 @@ tasks:
     desc: Create or Delete an omni cluster
     cmds:
     - teller run go run .
-    
+
   lint:
     desc: Lint the code
     cmds:

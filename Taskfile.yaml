@@ -1,28 +1,12 @@
 version: '3'
 
 tasks:
-  destroy-test:
-    desc: Destroy the test setup.
-    cmds:
-    - kind delete cluster
-  start-test:
-    desc: Test of crossplane scaling
-    cmds:
-    - kind create cluster --config kind-cluster.yaml
-    - helm upgrade --install crossplane crossplane --repo https://charts.crossplane.io/stable  --namespace crossplane-system --create-namespace --wait
-    - kubectl apply --filename provider-kubernetes-incluster.yaml
-    - kubectl create secret generic gcp-secret --namespace crossplane-system --from-literal="$(teller env)"
-    - helm repo add komodorio https://helm-charts.komodor.io
-    - helm repo update komodorio
-    - helm upgrade --install komoplane komodorio/komoplane
-    - sleep 20
-    - kubectl apply --filename provider-configs.yaml
 
   omni:
     desc: Create or Delete an omni cluster
     cmds:
-    - chmod +x create.sh && export LOG_LEVEL=Debug && ./create.sh
-
+    - teller run go run .
+    
   lint:
     desc: Lint the code
     cmds:

@@ -14,18 +14,4 @@ devbox shell
 task omni
 ```
 
-
-## Previous version (not recommended)
-
-```bash
-devbox shell
-task start-test
-```
-
-wait for completion
-
-```bash
-kubectl apply --filename instanceclain.yaml
-```
-
 Enjoy.

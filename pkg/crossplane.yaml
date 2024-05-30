@@ -14,7 +14,7 @@ spec:
   dependsOn:
   - provider: xpkg.upbound.io/upbound/provider-gcp-compute
     version: ">=v0.41.2"
-  - provider:  xpkg.upbound.io/crossplane-contrib/provider-kubernetes
+  - provider: xpkg.upbound.io/crossplane-contrib/provider-kubernetes
     version: ">=v0.10.0"
   - function: xpkg.upbound.io/crossplane-contrib/function-patch-and-transform
     version: ">=v0.1.4"

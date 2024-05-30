@@ -1,0 +1,12 @@
+formatter:
+  retain_line_breaks: true
+  indentless_arrays: true
+  scan_folded_as_literal: true
+
+offset: 0
+sequence: 2
+mapping: 2
+width: 4096
+preserve-quotes: true
+implicit_start: true
+preserve_null: true

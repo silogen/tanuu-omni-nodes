@@ -39,47 +39,7 @@ spec:
       kind: GoTemplate
       source: Inline
       inline:
-        template: |
-          {{- range (untilStep 0 (int $.observed.composite.resource.spec.parameters.replicas ) 1) }}          
-          ---
-          apiVersion: compute.gcp.upbound.io/v1beta1
-          kind: Instance
-          metadata:
-            generateName: {{ $.observed.composite.resource.spec.id }}-
-            annotations:
-              meta.upbound.io/instance-id: compute/v1beta1/{{ $.observed.composite.resource.spec.id }}
-              gotemplating.fn.crossplane.io/composition-resource-name: {{ $.observed.composite.resource.spec.id }}-{{ . }}
-            labels:
-              testing.upbound.io/instance-name: {{ $.observed.composite.resource.spec.id }}
-          spec:
-            forProvider:
-              bootDisk:
-                - deviceName: talos-instances
-                  initializeParams:
-                    - image: {{ $.observed.composite.resource.spec.parameters.image }}
-                      size: {{ $.observed.composite.resource.spec.parameters.size }}
-                      type: {{ $.observed.composite.resource.spec.parameters.imageType }}
-              machineType: {{ $.observed.composite.resource.spec.parameters.machineType }}
-              networkInterface:
-                - accessConfig:
-                    - networkTier: PREMIUM
-                  network: default
-                  stackType: IPV4_ONLY
-              {{ if (contains "g2" $.observed.composite.resource.spec.parameters.machineType) }}
-              scheduling:
-                - onHostMaintenance: TERMINATE
-                {{ end }}
-              serviceAccount: 
-                - email: {{ $.observed.composite.resource.spec.parameters.serviceAccountEmail }}
-                  scopes:
-                    - https://www.googleapis.com/auth/devstorage.read_only
-                    - https://www.googleapis.com/auth/logging.write
-                    - https://www.googleapis.com/auth/monitoring.write
-                    - https://www.googleapis.com/auth/servicecontrol
-                    - https://www.googleapis.com/auth/service.management.readonly
-                    - https://www.googleapis.com/auth/trace.append
-              zone: {{ $.observed.composite.resource.spec.parameters.zone }}
-          {{- end -}}
+        template: "{{- range (untilStep 0 (int $.observed.composite.resource.spec.parameters.replicas ) 1) }}          \n---\napiVersion: compute.gcp.upbound.io/v1beta1\nkind: Instance\nmetadata:\n  generateName: {{ $.observed.composite.resource.spec.id }}-\n  annotations:\n    meta.upbound.io/instance-id: compute/v1beta1/{{ $.observed.composite.resource.spec.id }}\n    gotemplating.fn.crossplane.io/composition-resource-name: {{ $.observed.composite.resource.spec.id }}-{{ . }}\n  labels:\n    testing.upbound.io/instance-name: {{ $.observed.composite.resource.spec.id }}\nspec:\n  forProvider:\n    bootDisk:\n      - deviceName: talos-instances\n        initializeParams:\n          - image: {{ $.observed.composite.resource.spec.parameters.image }}\n            size: {{ $.observed.composite.resource.spec.parameters.size }}\n            type: {{ $.observed.composite.resource.spec.parameters.imageType }}\n    machineType: {{ $.observed.composite.resource.spec.parameters.machineType }}\n    networkInterface:\n      - accessConfig:\n          - networkTier: PREMIUM\n        network: default\n        stackType: IPV4_ONLY\n    {{ if (contains \"g2\" $.observed.composite.resource.spec.parameters.machineType) }}\n    scheduling:\n      - onHostMaintenance: TERMINATE\n      {{ end }}\n    serviceAccount: \n      - email: {{ $.observed.composite.resource.spec.parameters.serviceAccountEmail }}\n        scopes:\n          - https://www.googleapis.com/auth/devstorage.read_only\n          - https://www.googleapis.com/auth/logging.write\n          - https://www.googleapis.com/auth/monitoring.write\n          - https://www.googleapis.com/auth/servicecontrol\n          - https://www.googleapis.com/auth/service.management.readonly\n          - https://www.googleapis.com/auth/trace.append\n    zone: {{ $.observed.composite.resource.spec.parameters.zone }}\n{{- end -}}\n"
   - functionRef:
       name: function-auto-ready
     step: automatically-detect-ready-composed-resources

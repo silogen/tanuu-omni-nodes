@@ -49,15 +49,15 @@ spec:
                     type: string
                     description: Name of the zone
                 required:
-                  - replicas
-                  - image
-                  - size
-                  - imageType
-                  - machineType
-                  - serviceAccountEmail
-                  - zone
+                - replicas
+                - image
+                - size
+                - imageType
+                - machineType
+                - serviceAccountEmail
+                - zone
             required:
-              - parameters
+            - parameters
     subresources:
       status: {}
       scale:

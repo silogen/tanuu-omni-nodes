@@ -26,3 +26,7 @@ providers:
       GITHUB_TOKEN:
         # need to supply the relevant version (versions/1)
         path: projects/<gcp project ID here>/secrets/omni-automation-cluster-init/versions/1
+
+  dotenv:
+    env_sync:
+      path: tanuu.env

@@ -1,6 +1,6 @@
 module github.com/tanuudev/tanuu-omni-nodes
 
-go 1.22.3
+go 1.22.1
 
 require (
 	github.com/charmbracelet/huh v0.3.0

@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"strconv"
 	"strings"
 	"time"
 
@@ -19,18 +18,15 @@ import (
 
 // https://github.com/charmbracelet/huh/blob/main/examples/burger/main.go
 
-type environment struct {
-	Name string
-}
-
 // Menu is the main function for handling the menu.
 func Menu() {
-	environment := environment{}
+	environment := utils.Environment{}
 
 	log.Info("starting up the menu...")
 	log.Debug("with debug enabled")
 	// Should we run in accessible mode?
-	accessible, _ := strconv.ParseBool(os.Getenv("ACCESSIBLE"))
+	// accessible, _ := strconv.ParseBool(os.Getenv("ACCESSIBLE"))
+	accessible := true
 	action := ""
 	form := huh.NewForm(
 		huh.NewGroup(
@@ -55,6 +51,11 @@ func Menu() {
 					Title("Choose your environment name (will be appended with random characters)").
 					Description("environment should we create?.\ntype EXIT to just exit.").
 					Placeholder("test"),
+				huh.NewConfirm().
+					Title("Does this need GPU's?").
+					Value(&environment.Gpu).
+					Affirmative("Yes!").
+					Negative("No."),
 			),
 		).WithAccessible(accessible)
 		err := form.Run()
@@ -62,6 +63,8 @@ func Menu() {
 		if err != nil {
 			log.Fatal("Uh oh:", err)
 		}
+		log.Debug("Creating environments: ", environment.Name)
+		log.Debug("Gpu: ", environment.Gpu)
 		if environment.Name == "EXIT" {
 			log.Info("Exiting...")
 			os.Exit(0)
@@ -70,12 +73,12 @@ func Menu() {
 		if err != nil {
 			log.Error("Error generating random string: ", err)
 		}
-		envname := environment.Name + "-" + suffix
+		environment.Name = environment.Name + "-" + suffix
 
 		createenv := func() {
-			ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute) // Set your desired timeout
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute) // Set your desired timeout
 			defer cancel()
-			err := create.Createenvironment(envname)
+			err := create.Createenvironment(ctx, environment)
 			if err != nil {
 				if ctx.Err() == context.DeadlineExceeded {
 					log.Fatalf("Command timed out: %v", ctx.Err())
@@ -85,7 +88,7 @@ func Menu() {
 			}
 		}
 		//spinner while running func
-		log.Debug("Creating environment with name: ", envname)
+		log.Debug("Creating environment with name: ", environment.Name)
 		_ = spinner.New().Title("Preparing your environment...").Accessible(accessible).Action(createenv).Run()
 
 		// Print order summary.
@@ -93,7 +96,7 @@ func Menu() {
 			var sb strings.Builder
 			fmt.Fprintf(&sb,
 				"%s",
-				lipgloss.NewStyle().Bold(true).Render("Environment "+envname+" Created."),
+				lipgloss.NewStyle().Bold(true).Render("Environment "+environment.Name+" Created."),
 			)
 
 			fmt.Println(

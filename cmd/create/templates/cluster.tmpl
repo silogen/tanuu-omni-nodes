@@ -1,0 +1,134 @@
+kind: Cluster
+name: {{ .Name }}
+kubernetes:
+  version: v1.29.4
+talos:
+  version: v1.6.7
+patches:
+  - idOverride: 100-{{ .Name }}
+    inline:
+      machine:
+        network:
+          kubespan:
+            enabled: true
+      cluster:
+        extraManifests:
+          - https://api.github.com/repos/silogen/cluster-init/contents/k8s-tailscale-users.yaml
+          - https://api.github.com/repos/silogen/cluster-init/contents/nvidia.yaml
+          - https://api.github.com/repos/silogen/cluster-init/contents/tailscale.yaml
+        extraManifestHeaders:
+          Accept: application/vnd.github.v3.raw
+          Authorization: Bearer {{ .GitHubToken }}
+        inlineManifests:
+          - name: namespace-tailscale # Name of the manifest.
+            contents: |- # Manifest contents as a string.
+              apiVersion: v1
+              kind: Namespace
+              metadata:
+                name: tailscale
+          - name: secret-tailscale # Name of the manifest.
+            contents: |- 
+              apiVersion: v1
+              kind: Secret
+              metadata:
+                name: operator-oauth
+                namespace: tailscale
+              stringData:
+                client_id: {{ .TailScaleClientID }}
+                client_secret: {{ .TailScaleClientSecret }}
+
+          - name: dep-tailscale # Name of the manifest.
+            contents: |- 
+              apiVersion: apps/v1
+              kind: Deployment
+              metadata:
+                name: operator
+                namespace: tailscale
+              spec:
+                replicas: 1
+                strategy:
+                  type: Recreate
+                selector:
+                  matchLabels:
+                    app: operator
+                template:
+                  metadata:
+                    labels:
+                      app: operator
+                  spec:
+                    serviceAccountName: operator
+                    volumes:
+                    - name: oauth
+                      secret:
+                        secretName: operator-oauth
+                    containers:
+                      - name: operator
+                        image: tailscale/k8s-operator:v1.64.2
+                        imagePullPolicy: Always
+                        env:
+                          - name: OPERATOR_INITIAL_TAGS
+                            value: tag:k8s-operator
+                          - name: OPERATOR_HOSTNAME
+                            value: {{ .Name }}-ts
+                          - name: OPERATOR_SECRET
+                            value: operator
+                          - name: OPERATOR_LOGGING
+                            value: info
+                          - name: OPERATOR_NAMESPACE
+                            valueFrom:
+                              fieldRef:
+                                fieldPath: metadata.namespace
+                          - name: CLIENT_ID_FILE
+                            value: /oauth/client_id
+                          - name: CLIENT_SECRET_FILE
+                            value: /oauth/client_secret
+                          - name: PROXY_IMAGE
+                            value: tailscale/tailscale:v1.64.2
+                          - name: PROXY_TAGS
+                            value: tag:k8s
+                          - name: APISERVER_PROXY
+                            value: "true"
+                          - name: PROXY_FIREWALL_MODE
+                            value: auto
+                        volumeMounts:
+                        - name: oauth
+                          mountPath: /oauth
+                          readOnly: true
+                    nodeSelector:
+                      kubernetes.io/os: linux
+
+---
+kind: ControlPlane
+machines:
+{{ .ControlPlane }}
+---
+kind: Workers
+machines:
+{{ .Workers }}
+---
+kind: Workers
+name: {{ .Name }}
+machines:
+{{ .Gpus }}
+patches:
+  - idOverride: 400-{{ .Name }}
+    inline:
+      machine:
+        nodeLabels:
+          gpu: "true"
+        kernel:
+          modules:
+            - name: nvidia
+            - name: nvidia_uvm
+            - name: nvidia_drm
+            - name: nvidia_modeset
+        sysctls:
+          net.core.bpf_jit_harden: 1
+        kubelet:
+          extraConfig:
+            registerWithTaints:
+              - effect: NoSchedule
+                key: nvidia.com/gpu
+                value: present
+
+          

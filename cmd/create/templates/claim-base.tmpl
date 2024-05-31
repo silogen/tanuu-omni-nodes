@@ -1,0 +1,37 @@
+apiVersion: tanuu.dev/v1alpha1
+kind: NodeGroupClaim
+metadata:
+  name: {{ .Name }}-worker-group
+spec:
+  compositionSelector:
+    matchLabels:
+      provider: google
+      cluster: gke
+  id: {{ .Name }}-worker-group
+  parameters:
+    replicas: 2
+    size: 50
+    image: projects/silogen-sandbox/global/images/omni-worker-v5
+    imageType: projects/silogen-sandbox/zones/europe-west4-a/diskTypes/pd-balanced
+    machineType: e2-highmem-4
+    serviceAccountEmail: 1067721308413-compute@developer.gserviceaccount.com
+    zone: europe-west4-a
+---
+apiVersion: tanuu.dev/v1alpha1
+kind: NodeGroupClaim
+metadata:
+  name: {{ .Name }}-ctlr-group
+spec:
+  compositionSelector:
+    matchLabels:
+      provider: google
+      cluster: gke
+  id: {{ .Name }}-ctlr-group
+  parameters:
+    replicas: 1
+    image: projects/silogen-sandbox/global/images/omni-ctrl-v4
+    size: 50
+    imageType: projects/silogen-sandbox/zones/europe-west4-a/diskTypes/pd-balanced
+    machineType: e2-highmem-4
+    serviceAccountEmail: 1067721308413-compute@developer.gserviceaccount.com
+    zone: europe-west4-a

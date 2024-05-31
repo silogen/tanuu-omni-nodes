@@ -1,0 +1,32 @@
+project: platform
+
+providers:
+  # GOOGLE_APPLICATION_CREDENTIALS=foobar.json
+  # https://cloud.google.com/secret-manager/docs/reference/libraries#setting_up_authentication
+  google_secretmanager:
+    env:
+      creds:
+        # need to supply the relevant version (versions/1)
+        path: projects/1067721308413/secrets/crossplane-auth/versions/2
+      OMNI_SERVICE_ACCOUNT_KEY:
+        # need to supply the relevant version (versions/1)
+        path: projects/1067721308413/secrets/omniserviceaccountkey/versions/1
+      OMNI_ENDPOINT:
+        # need to supply the relevant version (versions/1)
+        path: projects/1067721308413/secrets/omniendpoint/versions/1
+
+      TAILSCALE_CLIENT_ID:
+        # need to supply the relevant version (versions/1)
+        path: projects/1067721308413/secrets/tailscale-client-id/versions/1
+
+      TAILSCALE_CLIENT_SECRET:
+        # need to supply the relevant version (versions/1)
+        path: projects/1067721308413/secrets/tailscale-client-secret/versions/1
+
+      GITHUB_TOKEN:
+        # need to supply the relevant version (versions/1)
+        path: projects/1067721308413/secrets/omni-automation-cluster-init/versions/1
+
+  dotenv:
+    env_sync:
+      path: tanuu.env

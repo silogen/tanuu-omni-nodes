@@ -16,7 +16,7 @@ Ensure devbox is installed.
 
 Ensure there is an appropriate secret in GCP secrets manager (or depending on your teller config)
 
-Kubeconfig file named `kubeconfig` for a cluster where the crossplane config and claims have been installed. 
+Kubeconfig file named `kubeconfig` for the *ops* cluster where the crossplane config and claims have been installed. 
 
 ## Files
 
@@ -110,18 +110,4 @@ Now there is a kubernets cluster within the tailscale network!
 
 Create TAG.kubeconfig with the correct address of the kubernetes cluster within 
 tailscale network
-```
-
-## Legacy stuff
-
-### Previous version (not recommended)
-
-```bash
-devbox shell
-task start-test
-```
-& wait for completion
-
-```bash
-kubectl apply --filename instanceclain.yaml
 ```

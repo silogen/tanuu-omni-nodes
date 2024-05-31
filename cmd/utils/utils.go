@@ -32,6 +32,7 @@ type Environment struct {
 	TailScaleClientID     string
 	TailScaleClientSecret string
 	GitHubToken           string
+	Gpu                   bool
 }
 
 // Machines is the struct for the machines
@@ -65,18 +66,6 @@ func GenerateRandomString(length int) (string, error) {
 		return "", err
 	}
 	return hex.EncodeToString(bytes), nil
-}
-
-// Config is the struct for the an individual tool config
-type Config struct {
-	HelmChartName string `yaml:"helm-chart-name"`
-	HelmURL       string `yaml:"helm-url"`
-	Values        string `yaml:"values"`
-	Secrets       bool   `yaml:"secrets"`
-	Name          string `yaml:"name"`
-	HelmName      string `yaml:"helm-name"`
-	ManifestURL   string `yaml:"manifest-url"`
-	Filename      string
 }
 
 // Setup sets up the logging
@@ -149,7 +138,7 @@ func downloadFile(filepath string, url string) error {
 }
 
 // WaitForReady waits for the managed nodes to be ready
-func WaitForReady() {
+func WaitForReady(envname string) {
 	log.Debug("Waiting for the managed nodes to be ready")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
@@ -161,7 +150,8 @@ func WaitForReady() {
 			log.Error("Timeout waiting for the managed nodes to be ready")
 			return
 		default:
-			cmd := exec.Command("kubectl", "get", "managed", "-o", "jsonpath='{$.items[*].status.conditions[?(@.type==\"Ready\")].status}'")
+			// cmd := exec.Command("kubectl", "get", "managed", "-o", "jsonpath='{$.items[*].status.conditions[?(@.type==\"Ready\")].status}'")
+			cmd := exec.Command("kubectl", "get", "managed", "-o", "jsonpath='{range .items[*]}{.metadata.name}{\": \"}{.status.conditions[?(@.type==\"Ready\")].status}{\"\\n\"}{end}'")
 			output, err := cmd.Output()
 			log.Debug(cmd.String())
 			log.Debug("Output: ", string(output))
@@ -171,8 +161,10 @@ func WaitForReady() {
 				continue
 			}
 
-			if !strings.Contains(string(output), "False") {
-				return
+			if strings.Contains(string(output), envname) {
+				if !strings.Contains(string(output), "False") {
+					return
+				}
 			}
 			log.Debug("Nodes not ready")
 			time.Sleep(5 * time.Second)
@@ -274,7 +266,7 @@ func FindReadyNodes(environment string) ([]Machine, error) {
 
 // ApplyCluster applies the cluster
 func ApplyCluster(environment Environment) {
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute) // Set your desired timeout
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute) // Set your desired timeout
 	defer cancel()
 
 	cmd := exec.CommandContext(ctx, "omnictl", "cluster", "template", "sync", "-f", environment.Name+"-cluster.yaml")
@@ -295,7 +287,7 @@ func ApplyCluster(environment Environment) {
 
 // ListClusters lists the clusters
 func ListClusters() ([]string, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute) // Set your desired timeout
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute) // Set your desired timeout
 	defer cancel()
 
 	clusters := &bytes.Buffer{}
@@ -331,7 +323,7 @@ func ListClusters() ([]string, error) {
 
 // DeleteOmniCluster deletes the cluster
 func DeleteOmniCluster(name string) {
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute) // Set your desired timeout
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute) // Set your desired timeout
 	defer cancel()
 
 	cmd := exec.CommandContext(ctx, "omnictl", "cluster", "delete", name)
@@ -354,7 +346,7 @@ func DeleteOmniCluster(name string) {
 
 // DeleteOmniMachine deletes the machine
 func DeleteOmniMachine(name string) {
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute) // Set your desired timeout
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute) // Set your desired timeout
 	defer cancel()
 
 	cmd := exec.CommandContext(ctx, "omnictl", "delete", "link", name)
@@ -377,7 +369,7 @@ func DeleteOmniMachine(name string) {
 
 // DeleteNodes Deletes for the managed nodes
 func DeleteNodes(name string) {
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute) // Set your desired timeout
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute) // Set your desired timeout
 	defer cancel()
 
 	nodes := &bytes.Buffer{}

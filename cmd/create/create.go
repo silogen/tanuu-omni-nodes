@@ -19,23 +19,23 @@ import (
 var tplFolder embed.FS
 
 // Declare type pointer to a template
-var claimtemp *template.Template
+var claimbasetemp *template.Template
+var claimgputemp *template.Template
 var clustertemp *template.Template
 var kubeconfigtemp *template.Template
 
 // Using the init function to make sure the template is only parsed once in the program
 func init() {
 	// template.Must takes the reponse of template.ParseFiles and does ertemplror checking
-	claimtemp = template.Must(template.ParseFS(tplFolder, "templates/claim.tmpl"))
+	claimbasetemp = template.Must(template.ParseFS(tplFolder, "templates/claim-base.tmpl"))
+	claimgputemp = template.Must(template.ParseFS(tplFolder, "templates/claim-gpu.tmpl"))
 	clustertemp = template.Must(template.ParseFS(tplFolder, "templates/cluster.tmpl"))
 	kubeconfigtemp = template.Must(template.ParseFS(tplFolder, "templates/kubeconfig.tmpl"))
 }
 
 // Createenvironment creates an environment
-func Createenvironment(name string) error {
-	log.Info("Creating environment with name: ", name)
-	environment := utils.Environment{}
-	environment.Name = name
+func Createenvironment(ctx context.Context, environment utils.Environment) error {
+	log.Info("Creating environment with name: ", environment.Name)
 	environment.TailScaleClientID = os.Getenv("TAILSCALE_CLIENT_ID")
 	environment.TailScaleClientSecret = os.Getenv("TAILSCALE_CLIENT_SECRET")
 	// Execute the template with the environment struct
@@ -57,10 +57,18 @@ func Createenvironment(name string) error {
 		return err
 	}
 	defer kubeconfigfile.Close()
-	err = claimtemp.Execute(claimfile, environment)
-	if err != nil {
-		log.Fatalf("Error executing template: %v", err)
-		return err
+	if environment.Gpu {
+		err = claimgputemp.Execute(claimfile, environment)
+		if err != nil {
+			log.Fatalf("Error executing template: %v", err)
+			return err
+		}
+	} else {
+		err = claimbasetemp.Execute(claimfile, environment)
+		if err != nil {
+			log.Fatalf("Error executing template: %v", err)
+			return err
+		}
 	}
 	// check that fine kubeconfig exists
 	if _, err := os.Stat("kubeconfig"); os.IsNotExist(err) {
@@ -68,7 +76,7 @@ func Createenvironment(name string) error {
 		return err
 	}
 	// commandstring := "KUBECONFIG=kubeconfig kubectl apply -f " + environment.Name + "-composition.yaml"
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute) // Set your desired timeout
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute) // Set your desired timeout
 	defer cancel()
 	cmd := exec.CommandContext(ctx, "kubectl", "apply", "-f", environment.Name+"-composition.yaml")
 	var stderr bytes.Buffer
@@ -85,7 +93,7 @@ func Createenvironment(name string) error {
 		log.Fatalf("Error creating environment: %v, stderr: %s", err, stderr.String())
 		return err
 	}
-	utils.WaitForReady()
+	utils.WaitForReady(environment.Name)
 	log.Debug("nodes are ready")
 	// get the omni node ID's
 	time.Sleep(30 * time.Second)

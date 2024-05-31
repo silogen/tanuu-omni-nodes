@@ -29,7 +29,8 @@ cmd/                    # go programs subroutines
                         # get from silogen platform omni/templates
             kubeconfig.tmpl
                         # kubeconfig for the created cluster
-            claim.tmpl
+            claim-base.tmpl
+            claim-gpu.tml
             cluster.tmpl
             # there might be more of these in the future
     menu/
@@ -58,9 +59,16 @@ For more details, see below "Walkthroughs".
 
 ## Usage
 
+Run
 ```bash
+gcloud auth application-default login
 devbox shell
 task omni
+```
+
+Cleanup
+```
+rm *-cluster.yaml *-composition.yaml *.kubeconfig
 ```
 
 ## Walkthroughs

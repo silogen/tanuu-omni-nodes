@@ -17,7 +17,8 @@
   "shell": {
     "init_hook": [
       "alias cat='bat --paging never --theme DarkNeon --style plain'",
-      "gcloud auth list"
+      "eval \"$(teller sh)\"",
+      "gcloud auth list | grep 'silo.ai' || echo 'Error: not logged into a silo.ai glcoud account'"
     ],
     "scripts": {
       "test": [

@@ -139,7 +139,10 @@ func Createenvironment(ctx context.Context, environment utils.Environment) error
 		return err
 	}
 	utils.WaitForCluster(environment)
-	os.Remove(environment.Name + "-composition.yaml")
-	os.Remove(environment.Name + "-cluster.yaml")
+	logLevel := os.Getenv("LOG_LEVEL")
+	if logLevel != "Debug" {
+		os.Remove(environment.Name + "-composition.yaml")
+		os.Remove(environment.Name + "-cluster.yaml")
+	}
 	return nil
 }

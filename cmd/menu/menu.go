@@ -2,8 +2,10 @@ package menu
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
+	"regexp"
 	"strings"
 	"time"
 
@@ -23,7 +25,6 @@ func Menu() {
 	environment := utils.Environment{}
 
 	log.Info("starting up the menu...")
-	log.Debug("with debug enabled")
 	// Should we run in accessible mode?
 	// accessible, _ := strconv.ParseBool(os.Getenv("ACCESSIBLE"))
 	accessible := true
@@ -49,8 +50,16 @@ func Menu() {
 				huh.NewInput().
 					Value(&environment.Name).
 					Title("Choose your environment name (will be appended with random characters)").
-					Description("environment should we create?.\ntype EXIT to just exit.").
-					Placeholder("test"),
+					Description("environment should we create?.\ntype exit to just exit.").
+					Placeholder("test").
+					Validate(func(val string) error { // Modify the function signature to take a string argument
+						match, _ := regexp.MatchString("^[a-z0-9-]+$", val)
+						if !match {
+							return errors.New("input must only contain lowercase letters, numbers, and dashes")
+						}
+
+						return nil
+					}),
 				huh.NewConfirm().
 					Title("Does this need GPU's?").
 					Value(&environment.Gpu).
@@ -65,7 +74,7 @@ func Menu() {
 		}
 		log.Debug("Creating environments: ", environment.Name)
 		log.Debug("Gpu: ", environment.Gpu)
-		if environment.Name == "EXIT" {
+		if environment.Name == "exit" {
 			log.Info("Exiting...")
 			os.Exit(0)
 		}
@@ -145,7 +154,19 @@ func Menu() {
 		}
 		log.Debug("Machines and Cluster deleted")
 		utils.DeleteNodes(environment.Name)
+		files := []string{
+			environment.Name + "-composition.yaml",
+			environment.Name + "-cluster.yaml",
+			environment.Name + ".kubeconfig",
+		}
 
+		for _, file := range files {
+			if err := os.Remove(file); err != nil {
+				if !os.IsNotExist(err) {
+					log.Warnf("Failed to remove file: %v", err)
+				}
+			}
+		}
 		var sb strings.Builder
 		log.Debug("Environment Deletion Completed.")
 		fmt.Fprintf(&sb,

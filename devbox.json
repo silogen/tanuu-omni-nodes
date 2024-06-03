@@ -2,7 +2,6 @@
   "packages": [
     "go@1.22.1",
     "go-task@3.35.1",
-    "path:gcloud#google-cloud-sdk",
     "gh@2.44.1",
     "kubectl@1.29.2",
     "bat@0.24.0",
@@ -12,16 +11,30 @@
     "omnictl@0.32.2",
     "golint@2020-12-08",
     "yamllint@1.35.1",
-    "yamlfmt@0.12.1"
+    "yamlfmt@0.12.1",
+    "google-cloud-sdk@475.0.0"
   ],
+  "nixpkgs": {
+    "config": {
+      "allowUnfree": true,
+      "packageOverrides": {
+        "google-cloud-sdk": {
+          "components": [
+            "gke-gcloud-auth-plugin"
+          ]
+        }
+      }
+    }
+  },
   "shell": {
     "init_hook": [
       "alias cat='bat --paging never --theme DarkNeon --style plain'",
-      "gcloud auth list"
+      "eval \"$(teller sh)\"",
+      "gcloud auth list | grep 'silo.ai' || echo 'Error: not logged into a silo.ai glcoud account'"
     ],
     "scripts": {
       "test": [
-        "echo \"Error: no test specified\" && exit 0"
+        "task omni"
       ]
     }
   }

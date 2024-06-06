@@ -146,14 +146,15 @@ func Menu() {
 		utils.DeleteOmniCluster(environment.Name)
 		nodes, err := utils.FindReadyNodes(environment.Name)
 		if err != nil {
-			log.Fatal("Error finding nodes: ", err)
+			log.Error("Error finding nodes: ", err)
+		} else {
+			for _, node := range nodes {
+				log.Debug("Node: ", node.Metadata.ID, " Hostname: ", node.Spec.Platformmetadata.Hostname)
+				utils.DeleteOmniMachine(node.Metadata.ID)
+			}
 		}
-		for _, node := range nodes {
-			log.Debug("Node: ", node.Metadata.ID, " Hostname: ", node.Spec.Platformmetadata.Hostname)
-			utils.DeleteOmniMachine(node.Metadata.ID)
-		}
-		log.Debug("Machines and Cluster deleted")
 		utils.DeleteNodes(environment.Name)
+		log.Debug("Machines and Cluster deleted")
 		files := []string{
 			environment.Name + "-composition.yaml",
 			environment.Name + "-cluster.yaml",

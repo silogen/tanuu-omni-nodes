@@ -323,7 +323,7 @@ func ListClusters() ([]string, error) {
 
 // DeleteOmniCluster deletes the cluster
 func DeleteOmniCluster(name string) {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute) // Set your desired timeout
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute) // Set your desired timeout
 	defer cancel()
 
 	cmd := exec.CommandContext(ctx, "omnictl", "cluster", "delete", name)
@@ -332,12 +332,12 @@ func DeleteOmniCluster(name string) {
 	err := cmd.Run()
 
 	if ctx.Err() == context.DeadlineExceeded {
-		log.Fatalf("Command timed out: %v", ctx.Err())
+		log.Errorf("Command timed out: %v", ctx.Err())
 		return
 	}
 
 	if err != nil {
-		log.Fatalf("Error deleting environment: %v, stderr: %s", err, stderr.String())
+		log.Errorf("Error deleting environment: %v, stderr: %s", err, stderr.String())
 		return
 	}
 

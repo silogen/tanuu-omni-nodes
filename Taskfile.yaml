@@ -5,7 +5,7 @@ tasks:
   omni:
     desc: Create or Delete an omni cluster
     cmds:
-    - go run .
+    - export KUBECONFIG=kubeconfig && go run .
 
   lint:
     desc: Lint the code
